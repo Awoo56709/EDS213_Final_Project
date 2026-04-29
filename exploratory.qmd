@@ -1,0 +1,496 @@
+---
+title: "exploratory"
+format: html
+editor: visual
+---
+
+This week’s goal was to clean all four raw datasets so they are ready for ingestion into a relational database in Week 3. The datasets include:
+
+GRAPE_QUALITY.csv
+
+vivino_wines_2026.csv
+
+winemag-data_first150k.csv
+
+winemag-data-130k-v2.csv
+
+Each dataset required different cleaning steps depending on its structure and intended use. The cleaning focused on:
+
+Ensuring consistent column names
+
+Converting data types
+
+Standardizing text fields
+
+Removing duplicates
+
+Handling missing values
+
+Preparing each dataset for later normalization and schema design
+
+```{r}
+# Import Libraries
+
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(DBI)
+library(duckdb)
+```
+
+```{r}
+# Import Data
+
+grape_quality <- read_csv("data/GRAPE_QUALITY.csv") %>% clean_names()
+vivino <- read_csv("data/vivino_wines_2026.csv") %>% clean_names()
+winemag_150k <- read_csv("data/winemag-data_first150k.csv") %>% clean_names()
+winemag_130k <- read_csv("data/winemag-data-130k-v2.csv") %>% clean_names()
+
+```
+
+This dataset will eventually become my Observation table in my database, so it required the most cleaning
+
+# Cleaning
+
+## Cleaning Grape Quality Data
+
+```{r}
+# Grape_quality cleaning
+
+grape_quality_clean <- grape_quality %>%
+  mutate(
+    harvest_date = parse_date_time(harvest_date, orders = c("ymd", "mdy", "dmy")),
+    quality_category = str_to_title(quality_category),
+    across(c(quality_score, sugar_content_brix, acidity_ph,
+             cluster_weight_g, berry_size_mm, sun_exposure_hours),
+           ~ as.numeric(.)
+           )
+    )
+
+# standardizing text fields
+
+grape_quality_clean <- grape_quality_clean %>%
+  mutate(
+    variety = variety |> str_squish() |> str_to_title(),
+    region  = region  |> str_squish() |> str_to_title(),
+    quality_category = quality_category |> str_squish() |> str_to_title()
+  )
+
+# Check for out of scope values
+
+grape_quality_clean %>%
+  summarise(
+    min_brix = min(sugar_content_brix, na.rm = TRUE),
+    max_brix = max(sugar_content_brix, na.rm = TRUE),
+    min_ph   = min(acidity_ph, na.rm = TRUE),
+    max_ph   = max(acidity_ph, na.rm = TRUE),
+    min_sun  = min(sun_exposure_hours, na.rm = TRUE),
+    max_sun  = max(sun_exposure_hours, na.rm = TRUE),
+    min_moist = min(soil_moisture_percent, na.rm = TRUE),
+    max_moist = max(soil_moisture_percent, na.rm = TRUE),
+    min_rain = min(rainfall_mm, na.rm = TRUE),
+    max_rain = max(rainfall_mm, na.rm = TRUE)
+  )
+
+```
+
+## Cleaning Vivino Data
+
+```{r}
+# Vivino cleaning and ensure numeric fields and standardized text
+
+vivino_clean <- vivino %>%
+  mutate(
+    rating = as.numeric(rating),
+    ratings_count = as.integer(ratings_count),
+    vintage_year = as.integer(vintage_year),
+    across(
+      c(full_name, wine_name, winery_name, wine_type, region, country),
+      ~ .x |> str_squish() |> str_to_title()
+    )
+  ) %>%
+  distinct()
+
+```
+
+## Clean Winemag Dataset
+
+```{r}
+# Add columns 150k doesnt have so we can concatenate both sets
+
+winemag_150k <- winemag_150k %>%
+  mutate(
+    taster_name = NA_character_,
+    taster_twitter_handle = NA_character_,
+    title = NA_character_
+  )
+
+```
+
+```{r}
+#Wine mag clean function 
+
+clean_winemag <- function(df) {
+  df %>%
+    clean_names() %>%
+    mutate(
+      price = as.numeric(price),
+      points = as.integer(points),
+      taster_twitter_handle = na_if(taster_twitter_handle, ""),
+      country = str_to_title(country),
+      province = str_to_title(province),
+      region_1 = str_to_title(region_1),
+      region_2 = str_to_title(region_2),
+      variety = str_to_title(variety),
+      winery = str_to_title(winery)
+    )
+}
+
+```
+
+```{r}
+# Apply the changes and combine the datasets
+winemag_130k_clean <- clean_winemag(winemag_130k)
+winemag_150k_clean <- clean_winemag(winemag_150k)
+
+# Bind them
+winemag_all <- bind_rows(winemag_130k_clean, winemag_150k_clean)
+
+```
+
+```{r}
+winemag_clean <- winemag_all %>%
+  select(
+    country, description, designation, points, price,
+    province, region_1, region_2, taster_name,
+    taster_twitter_handle, title, variety, winery
+  ) %>%
+  mutate(
+    across(
+      c(country, province, region_1, region_2, variety, winery, taster_name, title),
+      ~ .x |> str_squish() |> str_to_title()
+    )
+  ) %>%
+  distinct()
+
+```
+
+# Cleaning Summary
+
+This week, I cleaned four wine‑related datasets to prepare them for ingestion into a relational database. Each dataset required different cleaning steps based on its structure and intended role in the final schema.
+
+GRAPE_QUALITY.csv received the most extensive cleaning because it will become the core Observation table. I standardized text fields, converted numeric and date columns, checked for impossible values, and ensured consistent formatting across varieties and regions.
+
+vivino_wines_2026.csv was cleaned to standardize winery names, wine types, and regions. Numeric fields were converted, and duplicates were removed. This dataset will later supply winery and wine‑type lookup tables.
+
+winemag-data_first150k.csv and winemag-data-130k-v2.csv were aligned by adding missing columns, cleaned using a shared function, and merged into a single tidy dataset. Only relevant columns were kept, and text fields were standardized.
+
+The above now enables us to ingest the data into the Duckdb for week 3.
+
+# Exploratory
+
+```{r}
+unique(grape_quality$region)
+```
+
+```{r}
+unique(vivino$region)
+```
+
+```{r}
+unique(winemag_all$province)
+```
+
+```{r}
+unique(grape_quality$variety)
+```
+
+This tells me what columns I would like to include in my database.
+
+# Connect with the Duckdb
+
+```{r}
+con <- DBI::dbConnect(duckdb::duckdb(), "wine_database.duckdb")
+```
+
+# Export the Cleaned Dataframes to CSV
+
+```{r}
+dir.create("clean", showWarnings =  FALSE)
+```
+
+```{r}
+
+write_csv(grape_quality_clean, "clean/grape_quality_clean.csv")
+```
+
+```{r}
+
+vivino_clean <- vivino_clean %>%
+  select(
+    country,
+    rating,
+    wine_name,
+    winery_name,
+    ratings_count,
+    wine_type,
+    region,
+    is_natural
+  )
+
+write_csv(vivino_clean, "clean/vivino_clean.csv")
+```
+
+```{r}
+winemag_clean <- winemag_clean %>%
+  select(
+    variety,
+    winery,
+    country,
+    province,
+    region_1,
+    points,
+    price
+  )
+
+write_csv(winemag_clean, "clean/winemag_clean.csv")
+```
+
+# Create Tables
+
+## Create Grape Quality Table
+
+### In Case Table Drop Needed
+
+```{sql connection=con}
+
+-- in case we need to delete tables
+
+DROP TABLE IF EXISTS grape_quality_clean;
+DROP TABLE IF EXISTS vivino_clean;
+DROP TABLE IF EXISTS winemag_clean;
+
+```
+
+```{sql connection=con}
+-- Create grape quality table
+
+CREATE TABLE grape_quality_clean (
+  sample_id INTEGER,
+  variety TEXT,
+  region TEXT,
+  quality_score DOUBLE,
+  quality_category TEXT,
+  sugar_content_brix DOUBLE,
+  acidity_ph DOUBLE,
+  cluster_weight_g DOUBLE,
+  berry_size_mm DOUBLE,
+  harvest_date DATE,
+  sun_exposure_hours DOUBLE,
+  soil_moisture_percent DOUBLE,
+  rainfall_mm DOUBLE
+);
+
+```
+
+## Create Vivino Table
+
+```{sql connection=con}
+
+CREATE TABLE vivino_clean (
+  country TEXT,
+  rating DOUBLE,
+  wine_name TEXT,
+  winery_name TEXT,
+  ratings_count INTEGER,
+  wine_type TEXT,
+  region TEXT,
+  is_natural BOOLEAN
+);
+
+
+```
+
+## Create Winemag Table
+
+```{sql connection=con}
+
+CREATE TABLE winemag_clean (
+  variety TEXT,
+  winery TEXT,
+  country TEXT,
+  province TEXT,
+  region_1 TEXT,
+  points BIGINT,
+  price DOUBLE
+);
+
+
+```
+
+# Ingesting the Data
+
+```{sql connection=con}
+COPY grape_quality_clean
+FROM 'clean/grape_quality_clean.csv'
+DELIMITER ','
+CSV HEADER;
+
+```
+
+```{sql connection=con}
+
+COPY vivino_clean
+FROM 'clean/vivino_clean.csv'
+DELIMITER ','
+CSV HEADER
+-- NA values so well change the NA to NULL
+NULL 'NA';
+
+```
+
+```{sql connection=con}
+
+COPY winemag_clean
+FROM 'clean/winemag_clean.csv'
+DELIMITER ','
+CSV HEADER
+NULL 'NA';
+
+```
+
+# Verify Column types were correctly assigned
+
+```{sql connection=con}
+
+SELECT 'grape_quality_clean' AS table, COUNT(*) AS rows FROM grape_quality_clean
+UNION ALL
+SELECT 'vivino_clean', COUNT(*) FROM vivino_clean
+UNION ALL
+SELECT 'winemag_clean', COUNT(*) FROM winemag_clean;
+
+```
+
+```{sql connection=con}
+
+DESCRIBE grape_quality_clean;
+
+```
+
+```{sql connection=con}
+
+DESCRIBE vivino_clean;
+
+```
+
+```{sql connection=con}
+
+DESCRIBE winemag_clean;
+
+```
+
+## Inspect Data
+
+```{sql connection=con}
+
+SELECT * FROM grape_quality_clean LIMIT 10;
+```
+
+```{sql connection=con}
+
+SELECT * FROM vivino_clean LIMIT 10;
+
+```
+
+```{sql connection=con}
+
+SELECT * FROM winemag_clean LIMIT 10;
+
+```
+
+# Exploratory Queries
+
+## Grape Quality Queries
+
+```{sql connection=con}
+
+SELECT DISTINCT variety
+FROM grape_quality_clean
+ORDER BY variety;
+
+```
+
+```{sql connection=con}
+
+SELECT region, AVG(quality_score) AS avg_quality
+FROM grape_quality_clean
+GROUP BY region
+ORDER BY avg_quality DESC;
+
+```
+
+## Vivino Queries
+
+```{sql connection=con}
+
+SELECT wine_name, winery_name, rating
+FROM vivino_clean
+ORDER BY rating DESC
+LIMIT 10;
+
+```
+
+## Wine Magazine Query
+
+```{sql connection=con}
+
+SELECT region_1, AVG(points) AS avg_points
+FROM winemag_clean
+GROUP BY region_1
+ORDER BY avg_points DESC
+LIMIT 10;
+
+```
+
+# Joining to Verify Relationships
+
+```{sql connection=con}
+
+SELECT
+  g.variety,
+  COUNT(*) AS grape_samples,
+  COUNT(w.variety) AS winemag_reviews
+FROM grape_quality_clean g
+LEFT JOIN winemag_clean w
+  ON g.variety = w.variety
+GROUP BY g.variety
+ORDER BY grape_samples DESC;
+```
+
+```{sql connection=con}
+
+SELECT
+  v.country,
+  median(v.rating) AS avg_vivino_rating,
+  median(w.points) AS avg_winemag_points
+FROM vivino_clean v
+JOIN winemag_clean w
+  ON v.country = w.country
+GROUP BY v.country
+ORDER BY avg_vivino_rating DESC;
+```
+
+```{sql connection=con}
+
+SELECT DISTINCT
+
+```
+
+# The Questions to Address
+
+Questions to consider:
+
+-   Which country has the highest Brix?
+-   Which Which French Region/Province has the highest rating/Brix?
+-   Which Region, grouped by variety have the highest brix?
+-   Which variety, grouped by region, has the highest brix? Have a threshold of environmental factors?
