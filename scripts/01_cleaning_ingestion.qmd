@@ -41,10 +41,10 @@ library(duckdb)
 ```{r}
 # Import Data
 
-grape_quality <- read_csv("data/GRAPE_QUALITY.csv") %>% clean_names()
-vivino <- read_csv("data/vivino_wines_2026.csv") %>% clean_names()
-winemag_150k <- read_csv("data/winemag-data_first150k.csv") %>% clean_names()
-winemag_130k <- read_csv("data/winemag-data-130k-v2.csv") %>% clean_names()
+grape_quality <- read_csv("data/raw/GRAPE_QUALITY.csv") %>% clean_names()
+vivino <- read_csv("data/raw/vivino_wines_2026.csv") %>% clean_names()
+winemag_150k <- read_csv("data/raw/winemag-data_first150k.csv") %>% clean_names()
+winemag_130k <- read_csv("data/raw/winemag-data-130k-v2.csv") %>% clean_names()
 
 ```
 
