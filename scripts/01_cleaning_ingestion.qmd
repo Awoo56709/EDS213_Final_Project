@@ -334,7 +334,7 @@ CREATE TABLE winemag_clean (
 
 ```{sql connection=con}
 COPY grape_quality_clean
-FROM 'clean/grape_quality_clean.csv'
+FROM 'data/clean/grape_quality_clean.csv'
 DELIMITER ','
 CSV HEADER;
 
@@ -343,7 +343,7 @@ CSV HEADER;
 ```{sql connection=con}
 
 COPY vivino_clean
-FROM 'clean/vivino_clean.csv'
+FROM 'data/clean/vivino_clean.csv'
 DELIMITER ','
 CSV HEADER
 -- NA values so well change the NA to NULL
@@ -354,7 +354,7 @@ NULL 'NA';
 ```{sql connection=con}
 
 COPY winemag_clean
-FROM 'clean/winemag_clean.csv'
+FROM 'data/clean/winemag_clean.csv'
 DELIMITER ','
 CSV HEADER
 NULL 'NA';

@@ -35,6 +35,7 @@ Questions to consider:
 -- Using all the tables, we shoud consider doing something that relates to region, country and popularity or rating
 -- ....
 -- Which countries based on regions, produce the higher Brix levels and does it relate to wine type (variety)
+-- Which wines are cheapest while maintaining a good brix score?
 
 SELECT
   v.country,
