@@ -21,9 +21,9 @@ JOIN winemag_clean w
 GROUP BY v.country
 ORDER BY avg_vivino_rating DESC;
 
-# The Questions to Address
+-- The Questions to Address
 
-Questions to consider:
+-- Questions to consider:
 
 --   Which country has the highest Brix?
 --   Which Which French Region/Province has the highest rating/Brix?

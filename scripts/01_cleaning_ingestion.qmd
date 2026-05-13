@@ -210,18 +210,18 @@ This tells me what columns I would like to include in my database.
 # Connect with the Duckdb
 
 ```{r}
-con <- DBI::dbConnect(duckdb::duckdb(), "wine_database.duckdb")
+con <- DBI::dbConnect(duckdb::duckdb(), "database/wine_database.duckdb")
 ```
 
 # Export the Cleaned Dataframes to CSV
 
 ```{r}
-dir.create("clean", showWarnings =  FALSE)
+dir.create("data/clean", showWarnings =  FALSE)
 ```
 
 ```{r}
 
-write_csv(grape_quality_clean, "clean/grape_quality_clean.csv")
+write_csv(grape_quality_clean, "data/clean/grape_quality_clean.csv")
 ```
 
 ```{r}
@@ -238,7 +238,7 @@ vivino_clean <- vivino_clean %>%
     is_natural
   )
 
-write_csv(vivino_clean, "clean/vivino_clean.csv")
+write_csv(vivino_clean, "data/clean/vivino_clean.csv")
 ```
 
 ```{r}
@@ -254,7 +254,7 @@ winemag_clean <- winemag_clean %>%
     price
   )
 
-write_csv(winemag_clean, "clean/winemag_clean.csv")
+write_csv(winemag_clean, "data/clean/winemag_clean.csv")
 ```
 
 # Create Tables
