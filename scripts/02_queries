@@ -1,5 +1,4 @@
 -- Joining to Verify Relationships
-
 SELECT
   g.variety,
   COUNT(*) AS grape_samples,
