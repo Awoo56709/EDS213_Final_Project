@@ -1,0 +1,220 @@
+-- Joining to Verify Relationships
+
+SELECT
+  g.variety,
+  COUNT(*) AS grape_samples,
+  COUNT(w.variety) AS winemag_reviews
+FROM grape_quality_clean g
+LEFT JOIN winemag_clean w
+  ON g.variety = w.variety
+GROUP BY g.variety
+ORDER BY grape_samples DESC;
+
+
+SELECT
+  v.country,
+  median(v.rating) AS avg_vivino_rating,
+  median(w.points) AS avg_winemag_points
+FROM vivino_clean v
+JOIN winemag_clean w
+  ON v.country = w.country
+GROUP BY v.country
+ORDER BY avg_vivino_rating DESC;
+
+# The Questions to Address
+
+Questions to consider:
+
+--   Which country has the highest Brix?
+--   Which Which French Region/Province has the highest rating/Brix?
+--   Which Region, grouped by variety have the highest brix?
+--   Which variety, grouped by region, has the highest brix? Have a threshold of environmental factors?
+
+
+-- After thought
+-- Using all the tables, we shoud consider doing something that relates to region, country and popularity or rating
+-- ....
+-- Which countries based on regions, produce the higher Brix levels and does it relate to wine type (variety)
+
+SELECT
+  v.country,
+  COALESCE(w.region_1,region_2) AS wine_region,
+  v.wine_type,
+  AVG(gq.sugar_content_brix) AS avg_brix,
+  AVG(w.points) AS avg_winemag_points,
+  COUNT(*) AS n_samples
+FROM grape_quality_clean gq
+JOIN winemag_clean w
+    ON gq.variety = w.variety
+    AND(
+      gq.region = w.region_1
+      OR gq.region = w.region_2
+    )
+JOIN vivino_clean v
+  ON w.country = v.country
+GROUP BY
+  v.country,
+  wine_region,
+  v.wine_type
+HAVING COUNT(*) > 5
+ORDER BY avg_brix DESC;
+
+
+
+-- Finding highest score by country
+
+SELECT
+  v.country,
+  COALESCE(w.region_1,region_2) AS wine_region,
+  v.wine_type,
+  AVG(gq.sugar_content_brix) AS avg_brix,
+  AVG(w.points) AS avg_winemag_points,
+  COUNT(*) AS n_samples
+FROM grape_quality_clean gq
+JOIN winemag_clean w
+    ON gq.variety = w.variety
+    AND(
+      gq.region = w.region_1
+      OR gq.region = w.region_2
+    )
+JOIN vivino_clean v
+  ON w.country = v.country
+GROUP BY
+  v.country,
+  wine_region,
+  v.wine_type
+HAVING COUNT(*) > 5;
+
+WITH brix_summary AS (
+    SELECT
+        v.country,
+        COALESCE(w.region_1, w.region_2) AS wine_region,
+        v.wine_type,
+        AVG(g.sugar_content_brix) AS avg_brix,
+        COUNT(*) AS n_samples,
+        ROW_NUMBER() OVER (
+            PARTITION BY v.country
+            ORDER BY AVG(g.sugar_content_brix) DESC
+        ) AS rn
+    FROM grape_quality_clean g
+    JOIN winemag_clean w
+        ON g.variety = w.variety
+        AND (
+            g.region = w.region_1
+            OR g.region = w.region_2
+        )
+    JOIN vivino_clean v
+        ON w.country = v.country
+    GROUP BY
+        v.country,
+        wine_region,
+        v.wine_type
+    HAVING COUNT(*) > 5
+)
+SELECT
+    country,
+    wine_region,
+    wine_type,
+    avg_brix,
+    n_samples
+FROM brix_summary
+WHERE rn = 1
+ORDER BY avg_brix DESC;
+
+
+-- Purely French
+
+SELECT
+    v.country,
+    COALESCE(w.region_1, w.region_2) AS wine_region,
+    w.province,
+    w.variety,
+    w.winery,
+    v.wine_type,
+    g.sugar_content_brix,
+    g.quality_score,
+    w.points AS winemag_points,
+    w.price
+FROM grape_quality_clean g
+JOIN winemag_clean w
+    ON g.variety = w.variety
+    AND (
+        g.region = w.region_1
+        OR g.region = w.region_2
+    )
+JOIN vivino_clean v
+    ON w.country = v.country
+WHERE v.country = 'France';
+
+
+WITH france_brix AS (
+    SELECT
+        COALESCE(w.region_1, w.region_2) AS wine_region,
+        w.province,
+        AVG(g.sugar_content_brix) AS avg_brix,
+        COUNT(*) AS n_samples,
+        ROW_NUMBER() OVER (
+            PARTITION BY w.province
+            ORDER BY AVG(g.sugar_content_brix) DESC
+        ) AS rn
+    FROM grape_quality_clean g
+    JOIN winemag_clean w
+        ON g.variety = w.variety
+        AND (
+            g.region = w.region_1
+            OR g.region = w.region_2
+        )
+    JOIN vivino_clean v
+        ON w.country = v.country
+    WHERE v.country = 'France'
+    GROUP BY
+        wine_region,
+        w.province
+    HAVING COUNT(*) > 5
+)
+SELECT
+    province,
+    wine_region,
+    avg_brix,
+    n_samples
+FROM france_brix
+WHERE rn <= 3
+ORDER BY province, avg_brix DESC;
+
+
+
+-- Aggregated Query for French Wines
+
+WITH france_brix AS (
+    SELECT
+        COALESCE(w.region_1, w.region_2) AS wine_region,
+        w.province,
+        AVG(g.sugar_content_brix) AS avg_brix,
+        COUNT(*) AS n_samples,
+        ROW_NUMBER() OVER (
+            PARTITION BY w.province
+            ORDER BY AVG(g.sugar_content_brix) DESC
+        ) AS rn
+    FROM grape_quality_clean g
+    JOIN winemag_clean w
+        ON g.variety = w.variety
+        AND (
+            g.region = w.region_1
+            OR g.region = w.region_2
+        )
+    JOIN vivino_clean v
+        ON w.country = v.country
+    WHERE v.country = 'France'
+    GROUP BY
+        wine_region,
+        w.province
+    HAVING COUNT(*) > 5
+)
+SELECT
+    province,
+    wine_region,
+    avg_brix,
+    n_samples
+FROM france_brix
+WHERE rn <= 3
+ORDER BY province, avg_brix DESC;
