@@ -465,6 +465,7 @@ colnames(vivino_clean)
 ```{r}
 colnames(winemag_clean)
 ```
+
 ```{r}
 DBI::dbDisconnect(con, shutdown = TRUE)
 ```
