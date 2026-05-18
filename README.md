@@ -72,27 +72,26 @@ Raw data files are included in the `data/` folder. Cleaned versions are in `clea
 
 This project uses the following R packages:
 
-dplyr — data manipulation
+tidyverse — Data‑science toolkit for the wrangling, plotting, and analysis.
 
-dbplyr — lazy SQL translation
+lubridate — For handling and manipulating of dates.
 
-tidyverse — core data science tools
+janitor — Data‑cleaning helpers.
 
-duckdb — local analytical database
+DBI — Interface for connecting R to databases.
 
-DBI — database interface
-
-ggplot2 — visualization
-
-knitr, rmarkdown — Quarto/Markdown rendering
+duckdb — Embedded analytical database used to run SQL queries locally.
 
 To install packages run in Rstudio:
-
+```
 install.packages(c(
-  "dplyr", "dbplyr", "tidyverse", "duckdb", "DBI",
-  "ggplot2", "tidyr", "purrr", "tibble", "readr",
-  "knitr", "rmarkdown"
+  "tidyverse",
+  "lubridate",
+  "janitor",
+  "DBI",
+  "duckdb"
 ))
+```
 
 
 ## References & Acknowledgements
