@@ -12,12 +12,11 @@ bottles under $20.
 This was completed as part of EDS 213: Databases and Data Management 
 at the Bren School of Environmental Science & Management, UCSB.
 
-## Repoaitory Structure
+## Repository Structure
 
 ```
 EDS213_FINAL_PROJECT/
 ├── README.md
-├── requirements.txt
 ├── .gitignore
 ├── EDS213_Final_Project.Rproj
 ├── data/
@@ -68,6 +67,33 @@ Raw data files are included in the `data/` folder. Cleaned versions are in `clea
 > Note: If `wine_database.duckdb` is already present, skip step 3. 
 > Only one process can access the DuckDB file at a time — do not 
 > open it in RStudio and VS Code simultaneously.
+
+# Dependencies
+
+This project uses the following R packages:
+
+dplyr — data manipulation
+
+dbplyr — lazy SQL translation
+
+tidyverse — core data science tools
+
+duckdb — local analytical database
+
+DBI — database interface
+
+ggplot2 — visualization
+
+knitr, rmarkdown — Quarto/Markdown rendering
+
+To install packages run in Rstudio:
+
+install.packages(c(
+  "dplyr", "dbplyr", "tidyverse", "duckdb", "DBI",
+  "ggplot2", "tidyr", "purrr", "tibble", "readr",
+  "knitr", "rmarkdown"
+))
+
 
 ## References & Acknowledgements
 
